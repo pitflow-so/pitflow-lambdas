@@ -10,7 +10,6 @@ on:
 
 env:
   PYTHON_VERSION: '3.12'
-  TERRAFORM_VERSION: 1.6.0
 
 jobs:
   validate:
@@ -43,9 +42,7 @@ jobs:
           echo "✅ Artefatos gerados com sucesso"
 
       - name: Configurar Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
+        uses: hashicorp/setup-terraform@v3
 
       - name: Terraform Format Check
         working-directory: infra/terraform

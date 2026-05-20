@@ -16,7 +16,6 @@ concurrency:
 
 env:
   AWS_REGION: us-east-1
-  TERRAFORM_VERSION: 1.6.0
   PYTHON_VERSION: '3.12'
 
 jobs:
@@ -80,9 +79,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Configurar Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
+        uses: hashicorp/setup-terraform@v3
 
       - name: Download dos artefatos do Build
         uses: actions/download-artifact@v4
