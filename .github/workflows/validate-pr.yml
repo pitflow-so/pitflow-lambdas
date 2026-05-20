@@ -1,0 +1,71 @@
+name: Validação de PR
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'lambdas/**'
+      - 'layers/**'
+      - 'infra/terraform/**'
+
+env:
+  PYTHON_VERSION: '3.12'
+  TERRAFORM_VERSION: 1.6.0
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Validar sintaxe Python
+        run: |
+          python -m py_compile lambdas/auth/src/handler.py
+          python -m py_compile lambdas/budget_form/src/handler.py
+          python -m py_compile infra/terraform/scripts/build_artifacts.py
+          echo "✅ Sintaxe Python validada"
+
+      - name: Executar build script (dry-run)
+        run: python infra/terraform/scripts/build_artifacts.py
+        working-directory: .
+
+      - name: Validar artefatos
+        run: |
+          echo "Verificando ZIPs gerados no build de validação..."
+          ls -lh infra/terraform/artifacts/
+          echo "✅ Artefatos gerados com sucesso"
+
+      - name: Configurar Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Terraform Format Check
+        working-directory: infra/terraform
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Validation
+        working-directory: infra/terraform
+        run: |
+          terraform init -backend=false
+          terraform validate
+          echo "✅ Terraform validado com sucesso"
+
+      - name: Comentar resultado no PR
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ **Validação aprovada!**\n\n- Python: sintaxe OK\n- Build script: executado com sucesso\n- Terraform: formatação e validação OK\n\nPronto para merge e deploy automático.'
+            })
