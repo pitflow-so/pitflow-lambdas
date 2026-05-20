@@ -6,7 +6,7 @@ from typing import Any
 import boto3
 
 
-SECRET_NAME = "secret_pitflow"
+SECRET_NAME = "pitflow/bootstrap"
 IS_LOCAL = os.getenv("IS_LOCAL", "false").lower() == "true"
 
 _secret_cache: dict[str, Any] | None = None
