@@ -65,3 +65,14 @@ output "deployment_info" {
     }
   }
 }
+
+
+output "eks_alb_url_resolved" {
+  description = "URL do Load Balancer do EKS extraída do Secrets Manager"
+  value       = local.eks_alb_url
+}
+
+output "api_gateway_endpoint" {
+  description = "URL base de invocação do API Gateway"
+  value       = aws_apigatewayv2_api.pitflow_api.api_endpoint
+}
