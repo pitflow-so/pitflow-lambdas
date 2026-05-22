@@ -57,6 +57,7 @@ jobs:
           test -f infra/terraform/artifacts/pitflow-shared-layer.zip || exit 1
           echo "✅ Todos os artefatos foram gerados com sucesso"
 
+          
       - name: Upload dos artefatos para o deploy
         uses: actions/upload-artifact@v4
         with:
@@ -200,3 +201,4 @@ jobs:
           psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c \
           "INSERT INTO app_config (key, value) VALUES ('API_GATEWAY_URL', '$APIGW_URL') \
           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;"
+          
