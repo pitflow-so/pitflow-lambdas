@@ -148,7 +148,6 @@ jobs:
 
       - name: Atualizar Secret e ConfigMap do EKS com URL do API Gateway
         env:
-          APIGW_URL: ${{ env.APIGW_URL }}
           EKS_CLUSTER_NAME: "pitflow-eks"
         run: |
           set -eo pipefail
@@ -159,46 +158,26 @@ jobs:
             --query SecretString \
             --output text)
           
-          UPDATED_SECRET=$(echo "$CURRENT_SECRET" | jq --arg url "$APIGW_URL" '. + {API_GATEWAY_URL: $url}')
+          UPDATED_SECRET=$(echo "$CURRENT_SECRET" | jq --arg url "$APIGW_URL" '. + {API_PUBLIC_URL: $url}')
           
           aws secretsmanager update-secret \
           --secret-id "pitflow/bootstrap" \
-          --secret-string "$UPDATED_SECRET"
+          --secret-string "$UPDATED_SECRET" > /dev/null
           
           echo "🔄 2. Configurando acesso ao EKS..."
           aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region us-east-1
           
           echo "🔄 3. Atualizando ConfigMap no EKS..."
-          # Substitua 'pitflow-config' pelo nome exato do seu ConfigMap, se for diferente
-          kubectl patch configmap pitflow-config -p "{\"data\":{\"API_GATEWAY_URL\":\"$APIGW_URL\"}}"
+          kubectl patch configmap pitflow-config -p "{\"data\":{\"API_PUBLIC_URL\":\"$APIGW_URL\"}}"
           
           echo "🔄 4. Reiniciando os Pods do Spring Boot..."
           kubectl rollout restart deployment/pitflow-backend
-          kubectl rollout status deployment/pitflow-backend --timeout=300s
+          kubectl rollout status deployment/pitflow-backend --timeout=300s || {
+            echo "❌ Rollout falhou, revertendo..."
+            kubectl rollout undo deployment/pitflow-backend
+            exit 1
+          }
           
           echo "✅ Fluxo de retroalimentação concluído!"
       
-      - name: Instalar cliente PostgreSQL
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
-
-      - name: Atualizar URL do API Gateway no banco de dados
-        env:
-          DB_URL: ${{ secrets.DB_URL }}
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASS: ${{ secrets.DB_PASS }}
-        run: |
-          set -eo pipefail
-          # 1. Instala o cliente (caso ainda não esteja instalado no runner)
-          sudo apt-get install -y postgresql-client
-          
-          # 2. Define a senha como variável de ambiente para o psql não pedir interação
-          export PGPASSWORD=$DB_PASS
-          
-          # 3. Executa o comando
-          APIGW_URL=$(terraform output -raw api_gateway_endpoint)
-          psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c \
-          "INSERT INTO app_config (key, value) VALUES ('API_GATEWAY_URL', '$APIGW_URL') \
-          ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;"
           
