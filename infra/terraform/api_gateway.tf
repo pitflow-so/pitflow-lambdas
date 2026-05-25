@@ -40,11 +40,11 @@ resource "aws_apigatewayv2_route" "route_budget_post" {
 resource "aws_apigatewayv2_integration" "eks_backend" {
   api_id             = aws_apigatewayv2_api.pitflow_api.id
   integration_type   = "HTTP_PROXY"
-  integration_uri    = "${local.eks_alb_url}/{proxy}"
+  integration_uri    = local.eks_alb_url
   integration_method = "ANY"
 
   request_parameters = {
-    "overwrite:header.host" = replace(local.eks_alb_url, "http://", "")
+    "overwrite:path" = "$request.path.proxy"
   }
 }
 
