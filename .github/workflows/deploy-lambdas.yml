@@ -57,6 +57,7 @@ jobs:
           test -f infra/terraform/artifacts/pitflow-shared-layer.zip || exit 1
           echo "✅ Todos os artefatos foram gerados com sucesso"
 
+          
       - name: Upload dos artefatos para o deploy
         uses: actions/upload-artifact@v4
         with:
@@ -119,6 +120,18 @@ jobs:
         working-directory: infra/terraform
         run: terraform output
 
+      - name: Capturar Outputs do Terraform
+        id: tf-outputs
+        working-directory: infra/terraform
+        run: |
+          # Extrai os valores crus (sem aspas) do Terraform
+          ALB_URL=$(terraform output -raw eks_alb_url_resolved)
+          APIGW_URL=$(terraform output -raw api_gateway_endpoint)
+          
+          # Joga para as variáveis de ambiente do GitHub Actions
+          echo "ALB_URL=$ALB_URL" >> $GITHUB_ENV
+          echo "APIGW_URL=$APIGW_URL" >> $GITHUB_ENV
+
       - name: Notificação de sucesso
         if: success()
         run: |
@@ -128,3 +141,43 @@ jobs:
           echo "  - pitflow-budget-form"
           echo "Layer deployada:"
           echo "  - pitflow-shared"
+          echo "------------------------------------------------------"
+          echo "🎯 EKS LoadBalancer URL (Backend): ${{ env.ALB_URL }}"
+          echo "🚀 API Gateway Base URL (Frontend): ${{ env.APIGW_URL }}"
+          echo "------------------------------------------------------"
+
+      - name: Atualizar Secret e ConfigMap do EKS com URL do API Gateway
+        env:
+          EKS_CLUSTER_NAME: "pitflow-eks"
+        run: |
+          set -eo pipefail
+          echo "🔄 1. Salvando APIGW_URL no Secrets Manager..."
+          
+          CURRENT_SECRET=$(aws secretsmanager get-secret-value \
+            --secret-id "pitflow/bootstrap" \
+            --query SecretString \
+            --output text)
+          
+          UPDATED_SECRET=$(echo "$CURRENT_SECRET" | jq --arg url "$APIGW_URL" '. + {API_PUBLIC_URL: $url}')
+          
+          aws secretsmanager update-secret \
+          --secret-id "pitflow/bootstrap" \
+          --secret-string "$UPDATED_SECRET" > /dev/null
+          
+          echo "🔄 2. Configurando acesso ao EKS..."
+          aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region us-east-1
+          
+          echo "🔄 3. Atualizando ConfigMap no EKS..."
+          kubectl patch configmap pitflow-config -p "{\"data\":{\"API_PUBLIC_URL\":\"$APIGW_URL\"}}"
+          
+          echo "🔄 4. Reiniciando os Pods do Spring Boot..."
+          kubectl rollout restart deployment/pitflow-backend
+          kubectl rollout status deployment/pitflow-backend --timeout=300s || {
+            echo "❌ Rollout falhou, revertendo..."
+            kubectl rollout undo deployment/pitflow-backend
+            exit 1
+          }
+          
+          echo "✅ Fluxo de retroalimentação concluído!"
+      
+          
