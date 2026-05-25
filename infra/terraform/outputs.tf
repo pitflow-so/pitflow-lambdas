@@ -70,6 +70,7 @@ output "deployment_info" {
 output "eks_alb_url_resolved" {
   description = "URL do Load Balancer do EKS extraída do Secrets Manager"
   value       = local.eks_alb_url
+  sensitive   = true
 }
 
 output "api_gateway_endpoint" {
