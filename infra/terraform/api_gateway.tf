@@ -43,6 +43,11 @@ resource "aws_apigatewayv2_integration" "eks_backend" {
   integration_uri    = local.eks_alb_url
   integration_method = "ANY"
 
+  # 👇 ESSENCIAL: repassa o path original para o ALB
+  request_parameters = {
+    "overwrite:path" = "/{proxy}"
+  }
+
 }
 
 resource "aws_apigatewayv2_route" "route_eks_proxy" {
