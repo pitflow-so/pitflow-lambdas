@@ -43,9 +43,6 @@ resource "aws_apigatewayv2_integration" "eks_backend" {
   integration_uri    = local.eks_alb_url
   integration_method = "ANY"
 
-  request_parameters = {
-    "overwrite:header.host" = replace(local.eks_alb_url, "http://", "")
-  }
 }
 
 resource "aws_apigatewayv2_route" "route_eks_proxy" {
