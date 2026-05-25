@@ -38,11 +38,11 @@ resource "aws_apigatewayv2_route" "route_budget_post" {
 
 # 4. Integração Catch-all (Proxy para o EKS)
 resource "aws_apigatewayv2_integration" "eks_backend" {
-  api_id                 = aws_apigatewayv2_api.pitflow_api.id
-  integration_type       = "HTTP_PROXY"
-  integration_uri        = local.eks_alb_url
-  integration_method     = "ANY"
-  
+  api_id             = aws_apigatewayv2_api.pitflow_api.id
+  integration_type   = "HTTP_PROXY"
+  integration_uri    = local.eks_alb_url
+  integration_method = "ANY"
+
   request_parameters = {
     "overwrite:header.host" = replace(local.eks_alb_url, "http://", "")
   }
