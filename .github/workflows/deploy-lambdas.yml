@@ -172,7 +172,7 @@ jobs:
           
           echo "🔄 4. Reiniciando os Pods do Spring Boot..."
           kubectl rollout restart deployment/pitflow-backend
-          kubectl rollout status deployment/pitflow-backend --timeout=300s || {
+          kubectl rollout status deployment/pitflow-backend --timeout=900s || {
             echo "❌ Rollout falhou, revertendo..."
             kubectl rollout undo deployment/pitflow-backend
             exit 1
