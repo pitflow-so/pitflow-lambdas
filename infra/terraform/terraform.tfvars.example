@@ -11,5 +11,3 @@ auth_lambda_name = "pitflow-auth"
 budget_form_lambda_name = "pitflow-budget-form"
 
 shared_layer_name = "pitflow-shared"
-
-secret_name = "secret_pitflow"
