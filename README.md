@@ -38,8 +38,8 @@ Ambas as funções reutilizam uma Lambda Layer compartilhada (`layers/shared`) c
 - AWS CLI configurado (credenciais e região)
 - Terraform instalado (versão compatível com provider AWS utilizado)
 - Este repositório publica somente as funções Lambda e a Layer compartilhada. O
-  API Gateway é gerenciado pela stack `infra/edge` do
-  `pitflow-cluster-kubernetes`, que deve ser executada depois deste deploy.
+  API Gateway é gerenciado pelo Terraform do `pitflow-cluster-kubernetes`, que
+  deve ser executado depois deste deploy.
 
 ## Execução local (desenvolvimento)
 
