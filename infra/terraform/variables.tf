@@ -33,9 +33,3 @@ variable "shared_layer_name" {
   type        = string
   default     = "pitflow-shared"
 }
-
-variable "secret_name" {
-  description = "Secrets Manager secret read by the Lambda functions."
-  type        = string
-  default     = "pitflow/bootstrap"
-}
