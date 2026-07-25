@@ -6,7 +6,9 @@ on:
     paths:
       - 'lambdas/**'
       - 'layers/**'
+      - 'tests/**'
       - 'infra/terraform/**'
+      - '.github/workflows/validate-pr.yml'
 
 env:
   PYTHON_VERSION: '3.12'
@@ -35,6 +37,9 @@ jobs:
           python -m py_compile lambdas/budget_form/src/handler.py
           python -m py_compile infra/terraform/scripts/build_artifacts.py
           echo "✅ Sintaxe Python validada"
+
+      - name: Executar testes unitários
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
 
       - name: Executar build script (dry-run)
         run: python infra/terraform/scripts/build_artifacts.py
