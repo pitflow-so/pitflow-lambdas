@@ -84,6 +84,16 @@ $env:PYTHONPATH = "$PWD\\layers\\shared\\python"; $env:IS_LOCAL = "true"; python
 
 Obs: os handlers esperam que segredos (JWT_SECRET, DB connection) estejam disponíveis; em modo local `secret_manager_service` tolera variáveis de ambiente.
 
+### Testes automatizados
+
+Os testes do `budget_form` isolam AWS, PostgreSQL e a chamada HTTP ao backend, portanto não exigem credenciais ou infraestrutura:
+
+```bash
+python -m unittest discover -s tests -p 'test_*.py' -v
+```
+
+O conjunto cobre a renderização GET, submissão POST por formulário e JSON, validações de CPF/cliente e o contrato PATCH enviado ao `operation`. Token de decisão, expiração, replay e integração real API Gateway → Lambda → operation ainda fazem parte do spike de homologação.
+
 ## Empacotamento / Build da Layer
 
 O script `infra/terraform/scripts/build_artifacts.py` constrói os artefatos (ZIPs) esperados pelo Terraform — incluindo a layer `pitflow_shared`.
