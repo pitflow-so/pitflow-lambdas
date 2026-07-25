@@ -1,7 +1,7 @@
 import html
 
 
-def render_form(service_order_id: str, action: str) -> str:
+def render_form(token: str, action: str) -> str:
     action_label = "Aprovar" if action == "APPROVED" else "Recusar"
     action_color = "#2e7d32" if action == "APPROVED" else "#c62828"
     action_symbol = "[OK]" if action == "APPROVED" else "[X]"
@@ -44,13 +44,10 @@ def render_form(service_order_id: str, action: str) -> str:
             </div>
             <div class="body">
                 <h2>{action_symbol} {action_label} Orcamento</h2>
-                <p>Para confirmar sua decisao, informe seu CPF abaixo.</p>
+                <p>Confirme sua decisao abaixo.</p>
                 <form method="POST" action="/customer/budget/confirm">
-                    <input type="hidden" name="serviceOrderId" value="{html.escape(service_order_id)}"/>
-                    <input type="hidden" name="action" value="{html.escape(action)}"/>
-                    <label for="cpf">CPF</label>
-                    <input type="text" id="cpf" name="cpf"
-                        placeholder="000.000.000-00" maxlength="14" required/>
+                    <input type="hidden" name="token" value="{html.escape(token)}"/>
+                    {_reason_field(action)}
                     <button type="submit">{action_symbol} {action_label} Orcamento</button>
                 </form>
             </div>
@@ -60,6 +57,17 @@ def render_form(service_order_id: str, action: str) -> str:
         </div>
     </body>
     </html>
+    """
+
+
+def _reason_field(action: str) -> str:
+    if action != "REJECTED":
+        return ""
+
+    return """
+                    <label for="reason">Motivo da recusa</label>
+                    <input type="text" id="reason" name="reason"
+                        maxlength="500" required/>
     """
 
 

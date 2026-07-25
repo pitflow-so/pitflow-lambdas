@@ -5,23 +5,22 @@ import json
 from pitflow_shared.secret_manager_service import get_secret_value
 
 
-def process_decision(service_order_id: str, action: str, token: str) -> bool:
+def process_decision(token: str, reason: str | None = None) -> bool:
     """
     Chama a API Spring Boot para registrar a decisão do cliente.
     Retorna True se sucesso, False caso contrário.
     """
     base_url = _get_api_url()
-    url = f"{base_url}/operation/service-orders/v2/{service_order_id}/budget-decision"
+    url = f"{base_url}/external/events/service-orders/decision"
 
-    payload = json.dumps({"decision": action}).encode("utf-8")
+    payload = json.dumps({"token": token, "reason": reason}).encode("utf-8")
 
     req = urllib.request.Request(
         url,
         data=payload,
-        method="PATCH",
+        method="POST",
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {token}",
         },
     )
 
@@ -36,4 +35,4 @@ def process_decision(service_order_id: str, action: str, token: str) -> bool:
         return False
 
 def _get_api_url() -> str:
-    return get_secret_value("SPRING_API_URL")
+    return get_secret_value("API_PUBLIC_URL")
