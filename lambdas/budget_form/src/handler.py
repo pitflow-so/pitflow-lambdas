@@ -9,7 +9,7 @@ from templates.budget_page import render_error, render_form, render_success
 
 
 def lambda_handler(event, context):
-    http_method = event.get("httpMethod", "")
+    http_method = _get_http_method(event)
     query_params = event.get("queryStringParameters") or {}
 
     if http_method == "GET":
@@ -20,6 +20,12 @@ def lambda_handler(event, context):
         return _handle_post(body)
 
     return _html_response(400, render_error("Requisicao invalida"))
+
+
+def _get_http_method(event):
+    request_context = event.get("requestContext") or {}
+    http_context = request_context.get("http") or {}
+    return event.get("httpMethod") or http_context.get("method", "")
 
 
 def _handle_get(query_params):

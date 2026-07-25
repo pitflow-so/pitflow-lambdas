@@ -6,6 +6,7 @@ on:
     paths:
       - 'lambdas/**'
       - 'layers/**'
+      - 'tests/**'
       - 'infra/terraform/**'
       - '.github/workflows/deploy-lambdas.yml'
   workflow_dispatch:
@@ -44,6 +45,9 @@ jobs:
           if [ -f layers/shared/requirements.txt ]; then
             pip install -r layers/shared/requirements.txt
           fi
+
+      - name: Executar testes unitários
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
 
       - name: Gerar ZIPs das Lambdas e Layer
         run: python infra/terraform/scripts/build_artifacts.py

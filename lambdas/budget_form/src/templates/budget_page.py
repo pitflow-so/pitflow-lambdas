@@ -45,7 +45,7 @@ def render_form(service_order_id: str, action: str) -> str:
             <div class="body">
                 <h2>{action_symbol} {action_label} Orcamento</h2>
                 <p>Para confirmar sua decisao, informe seu CPF abaixo.</p>
-                <form method="POST">
+                <form method="POST" action="/customer/budget/confirm">
                     <input type="hidden" name="serviceOrderId" value="{html.escape(service_order_id)}"/>
                     <input type="hidden" name="action" value="{html.escape(action)}"/>
                     <label for="cpf">CPF</label>
