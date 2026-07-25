@@ -5,9 +5,9 @@
 O repositório contém duas funções AWS Lambda em Python que implementam parte do fluxo de negócio do Pitflow:
 
 - `auth`: autenticação do cliente por CPF e emissão de token JWT.
-- `budget_form`: disponibiliza um formulário HTML para inserir CPF e submeter decisão de aprovação/reprovação de orçamento, este formulário chama um serviço backend externo (Spring Boot).
+- `budget_form`: valida o token de decisão recebido por e-mail, exibe a confirmação HTML e envia aprovação ou recusa ao serviço `operation`.
 
-Ambas as funções reutilizam uma Lambda Layer compartilhada (`layers/shared`) chamada `pitflow_shared`, que centraliza validação de CPF, acesso a dados de cliente e geração de JWT/consulta a segredos.
+As funções reutilizam a Lambda Layer `pitflow_shared`. A Lambda `auth` usa validação de CPF e lookup de cliente; o `budget_form` usa somente validação do JWT assinado e acesso ao Secrets Manager, sem consultar banco.
 
 ## Tecnologias
 
@@ -92,7 +92,7 @@ Os testes do `budget_form` isolam AWS, PostgreSQL e a chamada HTTP ao backend, p
 python -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
-O conjunto cobre a renderização GET, submissão POST por formulário e JSON, validações de CPF/cliente e o contrato PATCH enviado ao `operation`. Token de decisão, expiração, replay e integração real API Gateway → Lambda → operation ainda fazem parte do spike de homologação.
+O conjunto cobre renderização GET, submissão POST por formulário/JSON, token inválido ou expirado, aprovação, recusa com motivo e o contrato POST enviado ao `operation`. Replay e integração real API Gateway → Lambda → operation ainda dependem da homologação em AWS.
 
 ## Empacotamento / Build da Layer
 
@@ -123,23 +123,23 @@ Observação: não inclua segredos diretamente em arquivos de código — use AW
 
 ```mermaid
 graph LR
-	User[Usuário / Browser] -->|form / submit| FormLambda[Lambda: budget_form]
+	User[Usuário / Browser] -->|token / confirmação| FormLambda[Lambda: budget_form]
 	User -->|login| AuthLambda[Lambda: auth]
 	AuthLambda -->|usa| Layer[Layer: pitflow_shared]
-	FormLambda -->|usa| Layer
+	FormLambda -->|valida JWT| Layer
 	Layer --> Secrets[AWS Secrets Manager]
-	Layer --> Postgres[(Postgres / RDS)]
+	AuthLambda --> Postgres[(Postgres / RDS)]
 	FormLambda -->|chama| Backend[Backend Service]
   
 ```
  
-Este diagrama mostra os principais atores e dependências no repositório: duas Lambdas que reutilizam a mesma layer que encapsula acesso a segredos, validação de CPF, consultas ao banco e geração de tokens. O `budget_form` também realiza uma chamada para um backend externo responsável por persistir/atualizar a decisão de orçamento.
+O `budget_form` não acessa PostgreSQL: valida o token assinado e encaminha a decisão ao `operation`, único responsável por persistir e alterar a ordem.
 
 ## Justificativa da Layer `layers/shared`
 
 A criação da layer `pitflow_shared` foi feita para os seguintes motivos práticos:
 
-- **Reutilização de código**: ambas as Lambdas dependem de funcionalidades idênticas (validação de CPF, lookup de cliente, geração de JWT). Centralizar essas funções evita duplicação e facilita correções e melhorias.
+- **Reutilização de código**: autenticação e formulário compartilham acesso seguro ao segredo JWT e rotinas de token; CPF e lookup de cliente são exclusivos da autenticação.
 - **Consistência**: padroniza algoritmo de validação (mesmo comportamento para CPF), formato do token JWT e acesso a segredos, reduzindo risco de inconsistências entre funções.
 - **Tamanho do pacote e tempo de deploy**: empacotar bibliotecas comuns na layer diminui o tamanho dos ZIPs individuais das Lambdas e acelera builds e deploys quando a layer não muda.
 - **Segurança e gerenciamento de segredos**: `secret_manager_service` centraliza leitura/caching de segredos do AWS Secrets Manager, reduzindo chances de vazamento acidental e facilitando rotação de segredos.
@@ -148,7 +148,7 @@ A criação da layer `pitflow_shared` foi feita para os seguintes motivos práti
 Casos de uso no repositório:
 
 - `auth` usa `cpf_validator` + `customer_service` + `jwt_service` para autenticar um CPF e retornar um token.
-- `budget_form` usa `cpf_validator` + `customer_service` para verificar o cliente antes de submeter a decisão ao backend, e usa `jwt_service` quando precisa autenticar chamadas a outros serviços.
+- `budget_form` usa `jwt_service.decode_decision_token` e não consulta diretamente o banco de outro serviço.
 
 ## Referências úteis
 

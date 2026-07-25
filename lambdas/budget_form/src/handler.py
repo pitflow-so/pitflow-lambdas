@@ -1,9 +1,7 @@
 import json
 from urllib.parse import parse_qs
 
-from pitflow_shared.cpf_validator import validate_cpf
-from pitflow_shared.customer_service import find_customer
-from pitflow_shared.jwt_service import generate_token
+from pitflow_shared.jwt_service import decode_decision_token
 from services.decision_service import process_decision
 from templates.budget_page import render_error, render_form, render_success
 
@@ -29,39 +27,29 @@ def _get_http_method(event):
 
 
 def _handle_get(query_params):
-    service_order_id = query_params.get("serviceOrderId")
-    action = query_params.get("action")
-
-    if not _is_valid_decision_request(service_order_id, action):
+    token = query_params.get("token")
+    claims = _decode_token(token)
+    if claims is None:
         return _html_response(400, render_error("Link invalido ou expirado"))
 
-    return _html_response(200, render_form(service_order_id, action))
+    return _html_response(200, render_form(token, claims["status"]))
 
 
 def _handle_post(body):
-    cpf = (body.get("cpf") or "").strip()
-    service_order_id = body.get("serviceOrderId")
-    action = body.get("action")
-
-    if not cpf:
-        return _html_response(400, render_error("CPF e obrigatorio"))
-
-    if not validate_cpf(cpf):
-        return _html_response(400, render_error("CPF invalido"))
-
-    if not _is_valid_decision_request(service_order_id, action):
+    token = body.get("token")
+    reason = (body.get("reason") or "").strip()
+    claims = _decode_token(token)
+    if claims is None:
         return _html_response(400, render_error("Link invalido ou expirado"))
 
-    customer = find_customer(cpf)
-    if not customer:
-        return _html_response(404, render_error("Cliente nao encontrado"))
+    action = claims["status"]
+    if action == "REJECTED" and not reason:
+        return _html_response(
+            400,
+            render_error("O motivo da recusa e obrigatorio"),
+        )
 
-    if customer["status"] != "ACTIVE":
-        return _html_response(403, render_error("Cliente inativo"))
-
-    token = generate_token(customer)
-
-    success = process_decision(service_order_id, action, token)
+    success = process_decision(token, reason or None)
     if not success:
         return _html_response(500, render_error("Erro ao processar decisao. Tente novamente."))
 
@@ -87,13 +75,19 @@ def _get_header(headers, name):
     return ""
 
 
-def _is_valid_decision_request(service_order_id, action):
-    return bool(service_order_id) and action in ("APPROVED", "REJECTED")
+def _decode_token(token):
+    try:
+        return decode_decision_token(token)
+    except ValueError:
+        return None
 
 
 def _html_response(status_code, html):
     return {
         "statusCode": status_code,
-        "headers": {"Content-Type": "text/html; charset=utf-8"},
+        "headers": {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "no-store",
+        },
         "body": html,
     }

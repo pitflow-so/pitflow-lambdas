@@ -46,31 +46,30 @@ class DecisionServiceTest(unittest.TestCase):
         self.get_secret_value.return_value = "https://api.example"
 
     @patch("urllib.request.urlopen")
-    def test_sends_patch_to_operation_with_customer_token(self, urlopen):
+    def test_posts_decision_token_and_reason_to_operation(self, urlopen):
         response = MagicMock()
         response.__enter__.return_value.status = 204
         urlopen.return_value = response
 
         success = self.service.process_decision(
-            "order-1",
-            "APPROVED",
-            "customer-jwt",
+            "decision-jwt",
+            "Valor acima do esperado",
         )
 
         self.assertTrue(success)
+        self.get_secret_value.assert_called_with("API_PUBLIC_URL")
         request = urlopen.call_args.args[0]
         self.assertEqual(
-            "https://api.example/operation/service-orders/v2/"
-            "order-1/budget-decision",
+            "https://api.example/external/events/service-orders/decision",
             request.full_url,
         )
-        self.assertEqual("PATCH", request.method)
+        self.assertEqual("POST", request.method)
+        self.assertNotIn("Authorization", request.headers)
         self.assertEqual(
-            "Bearer customer-jwt",
-            request.headers["Authorization"],
-        )
-        self.assertEqual(
-            {"decision": "APPROVED"},
+            {
+                "token": "decision-jwt",
+                "reason": "Valor acima do esperado",
+            },
             json.loads(request.data.decode("utf-8")),
         )
 
@@ -85,11 +84,7 @@ class DecisionServiceTest(unittest.TestCase):
         )
 
         self.assertFalse(
-            self.service.process_decision(
-                "order-1",
-                "APPROVED",
-                "customer-jwt",
-            )
+            self.service.process_decision("decision-jwt")
         )
 
     @patch("urllib.request.urlopen")
@@ -97,11 +92,7 @@ class DecisionServiceTest(unittest.TestCase):
         urlopen.side_effect = TimeoutError("timeout")
 
         self.assertFalse(
-            self.service.process_decision(
-                "order-1",
-                "APPROVED",
-                "customer-jwt",
-            )
+            self.service.process_decision("decision-jwt")
         )
 
 
