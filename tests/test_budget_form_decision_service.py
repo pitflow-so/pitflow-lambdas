@@ -60,7 +60,7 @@ class DecisionServiceTest(unittest.TestCase):
         self.get_secret_value.assert_called_with("API_PUBLIC_URL")
         request = urlopen.call_args.args[0]
         self.assertEqual(
-            "https://api.example/external/events/service-orders/decision",
+            "https://api.example/operation/external/events/service-orders/decision",
             request.full_url,
         )
         self.assertEqual("POST", request.method)

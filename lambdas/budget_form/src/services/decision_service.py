@@ -11,7 +11,7 @@ def process_decision(token: str, reason: str | None = None) -> bool:
     Retorna True se sucesso, False caso contrário.
     """
     base_url = _get_api_url()
-    url = f"{base_url}/external/events/service-orders/decision"
+    url = f"{base_url}/operation/external/events/service-orders/decision"
 
     payload = json.dumps({"token": token, "reason": reason}).encode("utf-8")
 
