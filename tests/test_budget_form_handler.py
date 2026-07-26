@@ -1,4 +1,5 @@
 import importlib
+import base64
 import json
 import sys
 import types
@@ -46,6 +47,7 @@ class BudgetFormHandlerTest(unittest.TestCase):
         self.decode_decision_token.return_value = {
             "serviceOrderId": "order-1",
             "status": "APPROVED",
+            "amount": "450.00",
         }
         self.process_decision.reset_mock()
         self.process_decision.side_effect = None
@@ -68,6 +70,7 @@ class BudgetFormHandlerTest(unittest.TestCase):
             response["body"],
         )
         self.assertIn('name="token" value="decision-jwt"', response["body"])
+        self.assertIn("R$ 450,00", response["body"])
         self.assertNotIn('name="cpf"', response["body"])
         self.process_decision.assert_not_called()
 
@@ -111,6 +114,29 @@ class BudgetFormHandlerTest(unittest.TestCase):
                     "Content-Type": "application/x-www-form-urlencoded",
                 },
                 "body": "token=decision-jwt",
+            },
+            None,
+        )
+
+        self.assertEqual(200, response["statusCode"])
+        self.process_decision.assert_called_once_with(
+            "decision-jwt",
+            None,
+        )
+
+    def test_api_gateway_v2_post_decodes_base64_form_body(self):
+        encoded_body = base64.b64encode(
+            b"token=decision-jwt"
+        ).decode("ascii")
+
+        response = self.handler.lambda_handler(
+            {
+                "requestContext": {"http": {"method": "POST"}},
+                "headers": {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                "body": encoded_body,
+                "isBase64Encoded": True,
             },
             None,
         )
