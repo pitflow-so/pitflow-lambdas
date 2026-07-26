@@ -1,3 +1,4 @@
+import base64
 import json
 from urllib.parse import parse_qs
 
@@ -32,7 +33,10 @@ def _handle_get(query_params):
     if claims is None:
         return _html_response(400, render_error("Link invalido ou expirado"))
 
-    return _html_response(200, render_form(token, claims["status"]))
+    return _html_response(
+        200,
+        render_form(token, claims["status"], claims.get("amount")),
+    )
 
 
 def _handle_post(body):
@@ -59,6 +63,12 @@ def _handle_post(body):
 
 def _parse_body(event):
     body = event.get("body") or ""
+    if event.get("isBase64Encoded"):
+        try:
+            body = base64.b64decode(body).decode("utf-8")
+        except (ValueError, UnicodeDecodeError):
+            return {}
+
     content_type = _get_header(event.get("headers") or {}, "content-type")
 
     if "application/json" in content_type:

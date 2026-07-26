@@ -1,7 +1,8 @@
 import html
+from decimal import Decimal, InvalidOperation
 
 
-def render_form(token: str, action: str) -> str:
+def render_form(token: str, action: str, amount: str | None = None) -> str:
     action_label = "Aprovar" if action == "APPROVED" else "Recusar"
     action_color = "#2e7d32" if action == "APPROVED" else "#c62828"
     action_symbol = "[OK]" if action == "APPROVED" else "[X]"
@@ -12,7 +13,7 @@ def render_form(token: str, action: str) -> str:
     <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Pitflow - Confirmar Decisao</title>
+    <title>Pitflow - Confirmar decisão</title>
     <style>
         body {{ margin:0; padding:0; background:#f4f4f4; font-family:Arial,sans-serif; }}
         .container {{ max-width:480px; margin:60px auto; background:#fff;
@@ -24,6 +25,12 @@ def render_form(token: str, action: str) -> str:
         .body {{ padding:36px 40px; }}
         .body h2 {{ margin:0 0 8px; color:#1a1a2e; font-size:18px; }}
         .body p {{ color:#666; font-size:14px; margin:0 0 24px; }}
+        .amount {{ background:#f8f8fb; border-radius:6px; margin-bottom:24px;
+                   padding:16px; text-align:center; }}
+        .amount span {{ display:block; color:#999; font-size:12px;
+                        text-transform:uppercase; letter-spacing:1px; }}
+        .amount strong {{ display:block; color:#1a1a2e; font-size:24px;
+                          margin-top:6px; }}
         label {{ display:block; font-size:13px; color:#444; margin-bottom:6px; }}
         input[type=text] {{ width:100%; box-sizing:border-box; padding:12px;
                             border:1px solid #ddd; border-radius:6px; font-size:15px; }}
@@ -40,15 +47,16 @@ def render_form(token: str, action: str) -> str:
         <div class="container">
             <div class="header">
             <h1>PITFLOW</h1>
-            <p>Gestao de Ordens de Servico</p>
+            <p>Gestão de Ordens de Serviço</p>
             </div>
             <div class="body">
-                <h2>{action_symbol} {action_label} Orcamento</h2>
-                <p>Confirme sua decisao abaixo.</p>
+                <h2>{action_symbol} {action_label} Orçamento</h2>
+                <p>Confirme sua decisão abaixo.</p>
+                {_amount_field(amount)}
                 <form method="POST" action="/customer/budget/confirm">
                     <input type="hidden" name="token" value="{html.escape(token)}"/>
                     {_reason_field(action)}
-                    <button type="submit">{action_symbol} {action_label} Orcamento</button>
+                    <button type="submit">{action_symbol} {action_label} Orçamento</button>
                 </form>
             </div>
             <div class="footer">
@@ -57,6 +65,30 @@ def render_form(token: str, action: str) -> str:
         </div>
     </body>
     </html>
+    """
+
+
+def _amount_field(amount: str | None) -> str:
+    if amount is None:
+        return ""
+
+    try:
+        normalized = Decimal(str(amount)).quantize(Decimal("0.01"))
+    except (InvalidOperation, ValueError):
+        return ""
+
+    integer, decimal = f"{normalized:.2f}".split(".")
+    groups = []
+    while integer:
+        groups.append(integer[-3:])
+        integer = integer[:-3]
+    formatted = ".".join(reversed(groups)) + "," + decimal
+
+    return f"""
+                <div class="amount">
+                    <span>Valor total do orçamento</span>
+                    <strong>R$ {formatted}</strong>
+                </div>
     """
 
 
@@ -86,8 +118,8 @@ def render_success(label: str) -> str:
     </head>
     <body>
         <div class="box">
-            <h2>{symbol} Orcamento {html.escape(label)} com sucesso!</h2>
-            <p>Sua decisao foi registrada. Voce pode fechar esta pagina.</p>
+            <h2>{symbol} Orçamento {html.escape(label)} com sucesso!</h2>
+            <p>Sua decisão foi registrada. Você pode fechar esta página.</p>
         </div>
     </body>
     </html>
