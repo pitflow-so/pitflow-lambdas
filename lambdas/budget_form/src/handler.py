@@ -3,7 +3,7 @@ import json
 from urllib.parse import parse_qs
 
 from pitflow_shared.jwt_service import decode_decision_token
-from services.decision_service import process_decision
+from services.decision_service import DecisionResult, process_decision
 from templates.budget_page import render_error, render_form, render_success
 
 
@@ -53,8 +53,15 @@ def _handle_post(body):
             render_error("O motivo da recusa e obrigatorio"),
         )
 
-    success = process_decision(token, reason or None)
-    if not success:
+    result = process_decision(token, reason or None)
+    if result == DecisionResult.CONFLICT:
+        return _html_response(
+            409,
+            render_error(
+                "Uma decisao para este orcamento ja foi registrada."
+            ),
+        )
+    if result != DecisionResult.SUCCESS:
         return _html_response(500, render_error("Erro ao processar decisao. Tente novamente."))
 
     label = "aprovado" if action == "APPROVED" else "recusado"
