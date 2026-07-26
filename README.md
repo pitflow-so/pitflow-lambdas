@@ -55,11 +55,11 @@ pip install -r requirements.txt
     * 2.1 Como localmente não utilizo o sercret-manger pode criar um arquivo .env e configurar a IDE para definir as variáveis de ambiente.
     ```
     # Configurações do Banco
-    DB_NAME=pitflow_os
-    DB_USER=pitflow
-    DB_PASSWORD=pitflow
-    DB_HOST=localhost
-    DB_PORT=5432
+    PITFLOW_REGISTRY_DB_NAME=pitflow_registry
+    PITFLOW_REGISTRY_DB_USERNAME=pitflow
+    PITFLOW_REGISTRY_DB_PASSWORD=pitflow
+    PITFLOW_REGISTRY_DB_HOST=localhost
+    PITFLOW_REGISTRY_DB_PORT=5432
 
     # Segurança
     JWT_SECRET=123456

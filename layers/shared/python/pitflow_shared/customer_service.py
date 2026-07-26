@@ -10,6 +10,7 @@ from pitflow_shared.secret_manager_service import get_secret_value
 
 
 DEFAULT_DB_PORT = "5432"
+DB_SECRET_PREFIX = "PITFLOW_REGISTRY_DB"
 
 _connection = None
 
@@ -56,11 +57,11 @@ def _connect():
 
     except (OperationalError, InterfaceError):
         _connection = psycopg2.connect(
-            host=get_secret_value("DB_HOST"),
-            port=get_secret_value("DB_PORT", DEFAULT_DB_PORT),
-            dbname=get_secret_value("DB_NAME"),
-            user=get_secret_value("DB_USERNAME"),
-            password=get_secret_value("DB_PASSWORD"),
+            host=get_secret_value(f"{DB_SECRET_PREFIX}_HOST"),
+            port=get_secret_value(f"{DB_SECRET_PREFIX}_PORT", DEFAULT_DB_PORT),
+            dbname=get_secret_value(f"{DB_SECRET_PREFIX}_NAME"),
+            user=get_secret_value(f"{DB_SECRET_PREFIX}_USERNAME"),
+            password=get_secret_value(f"{DB_SECRET_PREFIX}_PASSWORD"),
             cursor_factory=RealDictCursor,
             connect_timeout=5,
         )
