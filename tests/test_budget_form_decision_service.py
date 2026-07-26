@@ -51,12 +51,12 @@ class DecisionServiceTest(unittest.TestCase):
         response.__enter__.return_value.status = 204
         urlopen.return_value = response
 
-        success = self.service.process_decision(
+        result = self.service.process_decision(
             "decision-jwt",
             "Valor acima do esperado",
         )
 
-        self.assertTrue(success)
+        self.assertEqual(self.service.DecisionResult.SUCCESS, result)
         self.get_secret_value.assert_called_with("API_PUBLIC_URL")
         request = urlopen.call_args.args[0]
         self.assertEqual(
@@ -74,7 +74,7 @@ class DecisionServiceTest(unittest.TestCase):
         )
 
     @patch("urllib.request.urlopen")
-    def test_returns_false_on_http_error(self, urlopen):
+    def test_returns_conflict_on_http_409(self, urlopen):
         urlopen.side_effect = HTTPError(
             "https://api.example",
             409,
@@ -83,16 +83,18 @@ class DecisionServiceTest(unittest.TestCase):
             None,
         )
 
-        self.assertFalse(
-            self.service.process_decision("decision-jwt")
+        self.assertEqual(
+            self.service.DecisionResult.CONFLICT,
+            self.service.process_decision("decision-jwt"),
         )
 
     @patch("urllib.request.urlopen")
-    def test_returns_false_on_network_error(self, urlopen):
+    def test_returns_error_on_network_error(self, urlopen):
         urlopen.side_effect = TimeoutError("timeout")
 
-        self.assertFalse(
-            self.service.process_decision("decision-jwt")
+        self.assertEqual(
+            self.service.DecisionResult.ERROR,
+            self.service.process_decision("decision-jwt"),
         )
 
 

@@ -33,8 +33,14 @@ class BudgetFormHandlerTest(unittest.TestCase):
             "pitflow_shared.jwt_service",
             decode_decision_token=cls.decode_decision_token,
         )
+        cls.DecisionResult = types.SimpleNamespace(
+            SUCCESS="SUCCESS",
+            CONFLICT="CONFLICT",
+            ERROR="ERROR",
+        )
         sys.modules["services.decision_service"] = _module(
             "services.decision_service",
+            DecisionResult=cls.DecisionResult,
             process_decision=cls.process_decision,
         )
 
@@ -51,7 +57,7 @@ class BudgetFormHandlerTest(unittest.TestCase):
         }
         self.process_decision.reset_mock()
         self.process_decision.side_effect = None
-        self.process_decision.return_value = True
+        self.process_decision.return_value = self.DecisionResult.SUCCESS
 
     def test_api_gateway_v2_get_renders_confirmation_form(self):
         response = self.handler.lambda_handler(
@@ -207,7 +213,7 @@ class BudgetFormHandlerTest(unittest.TestCase):
         self.process_decision.assert_not_called()
 
     def test_post_returns_error_when_operation_rejects_decision(self):
-        self.process_decision.return_value = False
+        self.process_decision.return_value = self.DecisionResult.ERROR
 
         response = self.handler.lambda_handler(
             {
@@ -219,6 +225,21 @@ class BudgetFormHandlerTest(unittest.TestCase):
         )
 
         self.assertEqual(500, response["statusCode"])
+
+    def test_post_explains_when_opposite_decision_was_already_recorded(self):
+        self.process_decision.return_value = self.DecisionResult.CONFLICT
+
+        response = self.handler.lambda_handler(
+            {
+                "httpMethod": "POST",
+                "headers": {},
+                "body": "token=decision-jwt",
+            },
+            None,
+        )
+
+        self.assertEqual(409, response["statusCode"])
+        self.assertIn("ja foi registrada", response["body"])
 
     def test_unsupported_method_is_rejected(self):
         response = self.handler.lambda_handler(
